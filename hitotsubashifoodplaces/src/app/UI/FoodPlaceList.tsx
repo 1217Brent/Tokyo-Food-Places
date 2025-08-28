@@ -2,7 +2,7 @@
 
 import { JSX } from "react";
 import { FoodPlaceCard } from "./FoodPlaceCard";
-import { FoodPlace } from "../dataTypes/FoodPlace";
+import { FoodPlace } from "../../dataTypes/FoodPlace";
 
 interface foodplaceListProps {
   foodplaces: FoodPlace[];

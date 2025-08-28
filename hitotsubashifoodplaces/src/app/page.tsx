@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { JSX } from "react";
-import { FoodPlace } from "./components/dataTypes/FoodPlace";
-import foodPlaceLocations from "./components/FoodPlaceData/foodPlaceData";
-import FoodPlaceList from "./components/UI/FoodPlaceList";
+import { FoodPlace } from "./dataTypes/FoodPlace";
+import FoodLocations from "./FoodPlaceData/foodPlaceData";
+import FoodPlaceList from "./UI/FoodPlaceList";
 import FoodPlaceMap from "./components/FoodMap/FoodMap";
 import NavBar from "./components/NavBar";
 import Footer from "./components/Footer";
@@ -14,6 +14,7 @@ import DropDown from "./components/DropDown";
 type Coords = FoodPlace["coordinates"];
 
 function App(): JSX.Element {
+  const foodPlaceLocations = FoodLocations;
   const [currCoords, setCurrCoords] = useState<Coords>([139.4413, 35.6999]);
   const [filteredFoodList, setFilteredFoodList] =
     useState<FoodPlace[]>(foodPlaceLocations);
@@ -59,7 +60,7 @@ function App(): JSX.Element {
     }
 
     const newList = foodPlaceLocations.filter((foodPlace) =>
-      foodPlace.cusine.some((cuisine) =>
+      foodPlace.cusine.some((cuisine: string) =>
         selectedOptions.includes(cuisine.toLowerCase())
       )
     );

@@ -1,7 +1,7 @@
 "use client";
 
 import { JSX, MouseEventHandler } from "react";
-import { FoodPlace } from "../dataTypes/FoodPlace";
+import { FoodPlace } from "../../dataTypes/FoodPlace";
 
 type FoodCardProps = {
   foodplace: Omit<FoodPlace, "id" | "coordinates">;
