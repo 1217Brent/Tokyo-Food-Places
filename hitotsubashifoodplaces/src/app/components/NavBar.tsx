@@ -11,7 +11,7 @@ export default function NavBar() {
     }
 
   return (
-    <nav className="z-10 bg-[#003366] text-white flex justify-between items-center py-3 px-6 fixed right-0 left-0 top-0 z-50 shadow-md">
+    <nav className="z-10 bg-[#800000] text-white flex justify-between items-center py-3 px-6 fixed right-0 left-0 top-0 z-50 shadow-md">
       {/* Left: Hitotsubashi text */}
       <div className="text-xl font-bold tracking-wide">
         Taste Tokyo
@@ -21,13 +21,13 @@ export default function NavBar() {
       <div className="flex space-x-6">
         <button
           onClick={() => scrollToSection("map-section")}
-          className="px-5 py-2 rounded-md font-semibold hover:bg-[#004080] transition"
+          className="px-5 py-2 rounded-md font-semibold hover:bg-[#F08080] transition"
         >
           Map
         </button>
         <button
           onClick={() => scrollToSection("list-section")}
-          className="px-5 py-2 rounded-md font-semibold hover:bg-[#004080] transition"
+          className="px-5 py-2 rounded-md font-semibold hover:bg-[#F08080] transition"
         >
           List
         </button>
