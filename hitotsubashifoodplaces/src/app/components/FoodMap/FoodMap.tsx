@@ -90,6 +90,13 @@ function FoodPlaceMap({ foodList, currCoords }: FoodPlaceListProps) {
 
 
 
+  // Recenters map when currCoords changes after initialization
+  useEffect(() => {
+    if (map.current && currCoords) {
+      map.current.flyTo({ center: currCoords });
+    }
+  }, [currCoords]);
+
   return <div ref={mapContainer} style={{ width: "100%", height: "500px" }} />;
 }
 

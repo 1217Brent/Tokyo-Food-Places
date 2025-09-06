@@ -3,13 +3,15 @@
 import { useState } from "react";
 import { JSX } from "react";
 import { FoodPlace } from "./dataTypes/FoodPlace";
-import FoodLocations from "./FoodPlaceData/foodPlaceData";
 import FoodPlaceList from "./UI/FoodPlaceList";
 import FoodPlaceMap from "./components/FoodMap/FoodMap";
 import NavBar from "./components/NavBar";
 import Footer from "./components/Footer";
 import SearchBar from "./components/SearchBar";
 import DropDown from "./components/DropDown";
+import InitMap from "./FoodPlaceData/GoogleMapsAPI";
+import CoordinateType from "./dataTypes/CoordinateType";
+import FoodLocations from "./FoodPlaceData/foodPlaceData";
 
 type Coords = FoodPlace["coordinates"];
 
@@ -30,22 +32,19 @@ function App(): JSX.Element {
     element?.scrollIntoView({behavior: "smooth"});
   }
 
-  const handleSearchBar = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSearchBar = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const input = e.target.value;
-
     if (input === "") {
       setFilteredFoodList(foodPlaceLocations);
       return;
     }
-
+    // now we need to create a new list for all foods that match the searchBar input
     const newList: FoodPlace[] = [];
-    foodPlaceLocations.forEach((foodplace: FoodPlace) => {
-      if (foodplace.name.includes(input)) {
-        newList.push(foodplace);
-      }
-    });
+    foodPlaceLocations.filter((foodSpot: FoodPlace) => foodSpot.name.includes(input)).forEach((foodPlace: FoodPlace) => {
+      newList.push(foodPlace);
+    })
     setFilteredFoodList(newList);
-  };
+  }
 
   const handleDropDown = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedOptions = Array.from(
@@ -91,7 +90,6 @@ function App(): JSX.Element {
               onClick={() => scrollToSection("search-section")}
               className="mt-8 inline-flex items-center bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold px-8 py-4 rounded-full shadow-2xl transform hover:scale-105 transition-all duration-300 ease-out"
             >
-              <span className="mr-2">🍜</span>
               Explore Eats
             </button>
           </div>
@@ -114,7 +112,7 @@ function App(): JSX.Element {
           
           <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-200">
             <div className="p-8">
-              <FoodPlaceMap foodList={filteredFoodList} currCoords={currCoords} />
+              <InitMap currCoords={currCoords}/>
             </div>
           </div>
         </div>
