@@ -1,7 +1,8 @@
 "use client";
 
-import { JSX, MouseEventHandler } from "react";
+import { JSX } from "react";
 import { FoodPlaceCardProps } from "../dataTypes/FoodCardProps";
+import Image from "next/image";
 
 export function FoodPlaceCard({
   foodplace,
@@ -16,11 +17,16 @@ export function FoodPlaceCard({
       className="relative flex flex-col my-6 bg-blue-700 shadow-sm rounded-lg w-96 cursor-pointer"
     >
       <div className="relative h-56 m-2.5 overflow-hidden text-white rounded-md">
-        <img
-          src={image}
-          alt={name}
-          className="object-cover w-full h-full transition-transform duration-300 hover:scale-105"
-        />
+        <div className="relative h-56 m-2.5 overflow-hidden text-white rounded-md">
+          <Image
+            src={image}
+            alt={name}
+            layout="fill" 
+            objectFit="cover"
+            priority 
+            className="rounded-md"
+          />
+        </div>
       </div>
       <div className="p-4">
         <h6 className="mb-2 text-white text-xl font-semibold truncate">

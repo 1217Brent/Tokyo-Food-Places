@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, JSX } from "react";
+import React, { useEffect, useCallback, useState, useMemo, JSX } from "react";
 import FoodPlaceList from "./UI/FoodPlaceList";
 import NavBar from "./components/NavBar";
 import Footer from "./components/Footer";
@@ -8,25 +8,49 @@ import SearchBar from "./components/SearchBar";
 import InitMap from "./FoodPlaceData/GoogleMapsAPI";
 import currentCoordinates from "./FoodPlaceData/CurrentCoordinates";
 import DropDown from "./components/DropDown";
+import Image from "next/image";
+import fetchNearbyRestaurants from "./hooks/fetchRestaurants";
 
 type Coords = typeof currentCoordinates;
 
+
 function App(): JSX.Element {
+  const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null);
   const [foodLocations, setFoodLocations] = useState<google.maps.places.PlaceResult[]>([]);
   const [filteredFoodList, setFilteredFoodList] = useState<google.maps.places.PlaceResult[]>([]);
   const [currCoords, setCurrCoords] = useState<Coords>(currentCoordinates);
   const [selectedUniversity, setSelectedUniversity] = useState("hitotsubashi");
 
-  const universityCoordinates: Record<string, Coords> = {
+  const universityCoordinates: Record<string, Coords> = useMemo(() => ({
     hitotsubashi: { lat: 35.694, lng: 139.4289 },
     waseda: { lat: 35.709, lng: 139.7198 },
     keio: { lat: 35.6479, lng: 139.7464 },
-  };
+  }), []);
 
-  const handleRestaurantsUpdate = useCallback((restaurants: google.maps.places.PlaceResult[]) => {
-    setFoodLocations(restaurants);
-    setFilteredFoodList(restaurants);
+  // This function receives the Map instance from InitMap
+  const handleMapUpdate = useCallback((map: google.maps.Map | null) => {
+    setMapInstance(map);
   }, []);
+
+  // When map and coordinates are ready, fetch restaurants
+  useEffect(() => {
+    if (!mapInstance || !currCoords) return;
+
+    fetchNearbyRestaurants(mapInstance, currCoords)
+      .then((restaurants) => {
+        setFoodLocations(restaurants);
+        setFilteredFoodList(restaurants);
+      })
+      .catch((error) => {
+        console.error("Failed to fetch restaurants:", error);
+      });
+  }, [mapInstance, currCoords]);
+
+  const handleRestaurantsUpdate = useCallback(
+    (restaurants: google.maps.places.PlaceResult[]) => {
+      setFoodLocations(restaurants);
+      setFilteredFoodList(restaurants);
+    }, []);
 
   const handleDropDown = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
     const selected = e.target.value;
@@ -44,7 +68,7 @@ function App(): JSX.Element {
       return;
     }
     setFilteredFoodList(
-      foodLocations.filter((place) => place.name?.toLowerCase().includes(input))
+      foodLocations.filter(place => place.name?.toLowerCase().includes(input))
     );
   }, [foodLocations]);
 
@@ -57,10 +81,13 @@ function App(): JSX.Element {
       <NavBar />
 
       <section className="relative w-full h-[80vh] overflow-hidden">
-        <img
+        <Image
           src="/hitotsubashi.jpg"
           alt="Food Hero"
           className="absolute inset-0 w-full h-full object-cover"
+          priority
+          height={256}
+          width={256}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/40 to-black/60" />
         <div className="relative z-10 flex flex-col items-center justify-center text-center h-full px-6">
@@ -84,14 +111,16 @@ function App(): JSX.Element {
             <h2 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
               レストランマップ
             </h2>
-            <p className="text-gray-600 text-lg">Check out the nearest places to eat!</p>
+            <p className="text-gray-600 text-lg">
+              Check out the nearest places to eat!
+            </p>
           </div>
 
           <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-200">
             <div className="p-8">
               <InitMap
                 currCoords={currCoords}
-                handleMapUpdate={() => {}}
+                handleMapUpdate={handleMapUpdate}
                 onRestaurantsUpdate={handleRestaurantsUpdate}
               />
             </div>
@@ -127,13 +156,17 @@ function App(): JSX.Element {
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-2xl font-bold text-gray-800">Restaurant Collection</h3>
               </div>
-              {filteredFoodList.length > 0 && (
+              {filteredFoodList.length > 0 ? (
                 <div className="h-[600px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 rounded-2xl">
                   <FoodPlaceList
                     foodplaces={filteredFoodList}
                     handleSelectCoordinates={handleSelectFoodPlace}
                   />
                 </div>
+              ) : (
+                <p className="text-center text-gray-500 py-20">
+                  No restaurants found.
+                </p>
               )}
             </div>
           </div>

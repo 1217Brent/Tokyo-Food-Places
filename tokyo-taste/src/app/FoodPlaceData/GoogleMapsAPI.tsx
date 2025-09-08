@@ -1,19 +1,28 @@
 "use client";
 
-import React, { useEffect, useRef, useCallback } from "react";
-import { useLoadScript, LoadScriptProps } from "@react-google-maps/api";
+import React, { useEffect, useRef } from "react";
+import { useLoadScript } from "@react-google-maps/api";
 import debounce from "lodash/debounce";
 import fetchNearbyRestaurants from "../hooks/fetchRestaurants";
 
 const containerStyle = { width: "100%", height: "500px" };
 
+interface Coords {
+  lat: number;
+  lng: number;
+}
+
 interface InitMapProps {
-  currCoords: { lat: number; lng: number };
+  currCoords: Coords;
   handleMapUpdate: (map: google.maps.Map | null) => void;
   onRestaurantsUpdate: (restaurants: google.maps.places.PlaceResult[]) => void;
 }
 
-export default function InitMap({ currCoords, handleMapUpdate, onRestaurantsUpdate }: InitMapProps) {
+export default function InitMap({
+  currCoords,
+  handleMapUpdate,
+  onRestaurantsUpdate,
+}: InitMapProps) {
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
     libraries: ["places"],
@@ -22,6 +31,13 @@ export default function InitMap({ currCoords, handleMapUpdate, onRestaurantsUpda
   const mapRef = useRef<google.maps.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
+  const currCoordsRef = useRef(currCoords);
+  const fetchMarkersDebounced = useRef<ReturnType<typeof debounce> | null>(null);
+
+  // Keep latest currCoords in ref for debounced function
+  useEffect(() => {
+    currCoordsRef.current = currCoords;
+  }, [currCoords]);
 
   // Initialize map once
   useEffect(() => {
@@ -33,14 +49,14 @@ export default function InitMap({ currCoords, handleMapUpdate, onRestaurantsUpda
       });
       handleMapUpdate(mapRef.current);
     }
-  }, [isLoaded]);
+  }, [isLoaded, handleMapUpdate, currCoords]);
 
-  // Debounced fetch & marker update to reduce flicker on rapid updates
-  const fetchAndUpdateMarkers = useCallback(
-    debounce(() => {
+  // Create debounced fetchMarkers once on mount
+  useEffect(() => {
+    fetchMarkersDebounced.current = debounce(() => {
       if (!mapRef.current) return;
 
-      fetchNearbyRestaurants(mapRef.current, currCoords)
+      fetchNearbyRestaurants(mapRef.current, currCoordsRef.current)
         .then((restaurants) => {
           onRestaurantsUpdate(restaurants);
 
@@ -62,22 +78,37 @@ export default function InitMap({ currCoords, handleMapUpdate, onRestaurantsUpda
         .catch((error) => {
           console.error("Error fetching restaurants:", error);
         });
-    }, 300),
-    [currCoords, onRestaurantsUpdate]
-  );
+    }, 300);
 
+    return () => {
+      if (fetchMarkersDebounced.current) {
+        fetchMarkersDebounced.current.cancel();
+      }
+    };
+  }, [onRestaurantsUpdate]);
+
+  // Pan map and fetch markers on coords change
   useEffect(() => {
     if (
-      mapRef.current &&
-      typeof currCoords.lat === "number" &&
-      typeof currCoords.lng === "number" &&
-      isFinite(currCoords.lat) &&
-      isFinite(currCoords.lng)
-    ) {
-      mapRef.current.panTo(currCoords);
-      fetchAndUpdateMarkers();
+      !mapRef.current ||
+      !fetchMarkersDebounced.current ||
+      typeof currCoords.lat !== "number" ||
+      typeof currCoords.lng !== "number" ||
+      !isFinite(currCoords.lat) ||
+      !isFinite(currCoords.lng)
+    )
+      return;
+
+    mapRef.current.panTo(currCoords);
+    fetchMarkersDebounced.current();
+  }, [currCoords]);
+
+  // Trigger initial fetch once map is ready
+  useEffect(() => {
+    if (mapRef.current && fetchMarkersDebounced.current) {
+      fetchMarkersDebounced.current();
     }
-  }, [currCoords, fetchAndUpdateMarkers]);
+  }, [isLoaded]);
 
   if (loadError) return <div>Error loading Maps</div>;
   if (!isLoaded) return <div>Loading Maps...</div>;

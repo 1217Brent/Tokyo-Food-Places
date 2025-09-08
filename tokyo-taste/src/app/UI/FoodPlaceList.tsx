@@ -3,8 +3,6 @@
 
 import { JSX } from "react";
 import { FoodPlaceCard } from "./FoodPlaceCard";
-import { FoodPlace } from "../dataTypes/FoodPlace";
-import { FoodCardProps } from "../dataTypes/FoodCardProps";
 
 
 interface FoodPlaceListProps {
