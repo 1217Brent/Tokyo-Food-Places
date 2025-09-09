@@ -14,15 +14,18 @@ function FoodPlaceList({ foodplaces, handleSelectCoordinates }: FoodPlaceListPro
   return (
     <div className="overflow-x-auto w-full">
       <div className="flex flex-nowrap gap-6 px-4 py-2 min-w-fit">
-        {foodplaces?.map((foodplace) => (
+        {foodplaces?.map((foodplace, idx) => (
           <FoodPlaceCard
-            key={foodplace.place_id}
+            key={idx}
             foodplace={{
               place_id: foodplace.place_id || "",
               name: foodplace.name || "",
               image: (foodplace.photos && foodplace.photos[0]?.getUrl()) || "",
               description: foodplace.vicinity || "",
-              link: foodplace.url || "",
+              link: foodplace.place_id
+              ? `https://www.google.com/maps/place/?q=place_id:${foodplace.place_id}`
+              : "",
+            
             }}
             handleCoordsChange={() => {
               const coords = foodplace.geometry?.location;
