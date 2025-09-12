@@ -13,7 +13,6 @@ import fetchNearbyRestaurants from "./hooks/fetchRestaurants";
 
 type Coords = typeof currentCoordinates;
 
-
 function App(): JSX.Element {
   const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null);
   const [foodLocations, setFoodLocations] = useState<google.maps.places.PlaceResult[]>([]);
@@ -27,12 +26,10 @@ function App(): JSX.Element {
     keio: { lat: 35.6479, lng: 139.7464 },
   }), []);
 
-  // This function receives the Map instance from InitMap
   const handleMapUpdate = useCallback((map: google.maps.Map | null) => {
     setMapInstance(map);
   }, []);
 
-  // When map and coordinates are ready, fetch restaurants
   useEffect(() => {
     if (!mapInstance || !currCoords) return;
 
@@ -77,46 +74,46 @@ function App(): JSX.Element {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 via-white to-gray-100">
+    <div className="min-h-screen flex flex-col bg-slate-900 text-slate-300">
       <NavBar />
 
       <section className="relative w-full h-[80vh] overflow-hidden">
         <Image
           src="/hitotsubashi.jpg"
           alt="Food Hero"
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover brightness-75"
           priority
           height={256}
           width={256}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/40 to-black/60" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-900/70 to-slate-900/95" />
         <div className="relative z-10 flex flex-col items-center justify-center text-center h-full px-6">
-          <div className="backdrop-blur-sm bg-white/10 rounded-2xl p-8 border border-white/20">
-            <h1 className="text-white text-5xl md:text-6xl lg:text-7xl font-black tracking-tight drop-shadow-2xl">
+          <div className="backdrop-blur-md bg-slate-900/40 rounded-2xl p-8 border border-slate-700/60">
+            <h1 className="text-transparent bg-gradient-to-r from-blue-400 via-blue-300 to-cyan-300 bg-clip-text text-6xl font-extrabold tracking-tight drop-shadow-lg">
               Taste Tokyo
             </h1>
-            <p className="mt-6 text-white/90 text-xl md:text-2xl font-medium max-w-2xl drop-shadow-lg">
+            <p className="mt-6 text-slate-300 text-2xl font-medium max-w-2xl drop-shadow-md">
               キャンパスに近いレストラン
             </p>
-            <div className="mt-4">
+            <div className="mt-5">
               <DropDown value={selectedUniversity} handleChange={handleDropDown} />
             </div>
           </div>
         </div>
       </section>
 
-      <section id="map-section" className="w-full bg-gray-50">
+      <section id="map-section" className="w-full bg-slate-800">
         <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-24 py-16">
           <div className="text-center mb-10">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
+            <h2 className="text-4xl md:text-5xl font-bold text-cyan-300 mb-3">
               レストランマップ
             </h2>
-            <p className="text-gray-600 text-lg">
+            <p className="text-slate-400 text-lg">
               Check out the nearest places to eat!
             </p>
           </div>
 
-          <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-200">
+          <div className="bg-slate-900 rounded-3xl shadow-lg overflow-hidden border border-slate-700">
             <div className="p-8">
               <InitMap
                 currCoords={currCoords}
@@ -128,43 +125,38 @@ function App(): JSX.Element {
         </div>
       </section>
 
-      <section
-        id="list-section"
-        className="w-full bg-gradient-to-br from-amber-700 via-amber-600 to-amber-800"
-      >
+      <section id="list-section" className="w-full bg-gradient-to-br from-blue-900 via-slate-900 to-[#0f172a]">
         <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-24 py-16">
           <div className="text-center mb-12">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+            <h2 className="text-4xl md:text-5xl font-bold text-cyan-400 mb-6">
               キャンパスに近いレストラン
             </h2>
-            <div className="w-24 h-1 bg-white/80 mx-auto rounded-full"></div>
+            <div className="w-24 h-1 bg-cyan-400 mx-auto rounded-full"></div>
           </div>
 
-          <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl p-8 mb-8 border border-white/20">
-            <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wide text-left">
-                  Search Restaurants
-                </label>
-                <SearchBar onSearch={handleSearchBar} />
-              </div>
+          <div className="bg-slate-900/70 backdrop-blur-md rounded-3xl shadow-lg p-8 mb-8 border border-cyan-500/40">
+            <div className="space-y-4 max-w-md mx-auto">
+              <label className="block text-cyan-300 text-sm font-semibold uppercase tracking-wide text-left">
+                Search Restaurants
+              </label>
+              <SearchBar onSearch={handleSearchBar} />
             </div>
           </div>
 
-          <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl overflow-hidden border border-white/20">
+          <div className="bg-slate-900/90 backdrop-blur-md rounded-3xl shadow-lg overflow-hidden border border-cyan-600/60">
             <div className="p-8">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-bold text-gray-800">Restaurant Collection</h3>
+                <h3 className="text-2xl font-bold text-cyan-400">Restaurant Collection</h3>
               </div>
               {filteredFoodList.length > 0 ? (
-                <div className="h-[600px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 rounded-2xl">
+                <div className="h-[600px] overflow-y-auto scrollbar-thin scrollbar-thumb-cyan-600 scrollbar-track-slate-800 rounded-2xl">
                   <FoodPlaceList
                     foodplaces={filteredFoodList}
                     handleSelectCoordinates={handleSelectFoodPlace}
                   />
                 </div>
               ) : (
-                <p className="text-center text-gray-500 py-20">
+                <p className="text-center text-slate-500 py-20">
                   No restaurants found.
                 </p>
               )}

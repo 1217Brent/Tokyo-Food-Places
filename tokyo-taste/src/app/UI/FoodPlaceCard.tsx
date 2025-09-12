@@ -8,28 +8,29 @@ export function FoodPlaceCard({
   foodplace,
   handleCoordsChange,
 }: FoodPlaceCardProps): JSX.Element {
-  const { name, image, description, link } = foodplace; 
+  const { name, image, description, link } = foodplace;
 
   return (
     <div
       onClick={handleCoordsChange}
-      className="relative flex flex-col my-6 bg-blue-700 shadow-sm rounded-lg w-96 cursor-pointer"
+      className="relative flex flex-col my-6 bg-slate-800 shadow-lg rounded-xl w-96 cursor-pointer
+                 transition-transform duration-300 ease-in-out hover:scale-[1.03] hover:shadow-cyan-500/50"
     >
-      <div className="relative h-56 m-2.5 overflow-hidden text-white rounded-md">
+      <div className="relative h-56 m-2.5 overflow-hidden rounded-lg ring-1 ring-cyan-600/40">
         <Image
           src={image}
           alt={name}
-          fill  
+          fill
           style={{ objectFit: "cover" }}
-          priority 
-          className="rounded-md"
+          priority
+          className="rounded-lg"
         />
       </div>
       <div className="p-4">
-        <h6 className="mb-2 text-white text-xl font-semibold truncate">
+        <h6 className="mb-2 text-cyan-400 text-xl font-semibold truncate drop-shadow-md">
           {name}
         </h6>
-        <p className="text-gray-300 leading-normal font-light line-clamp-3">
+        <p className="text-slate-300 leading-relaxed font-light line-clamp-3">
           {description}
         </p>
       </div>
@@ -38,8 +39,10 @@ export function FoodPlaceCard({
           href={link}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-block rounded-md bg-blue-500 py-2 px-4 border border-transparent text-center text-sm text-white transition-all shadow-md hover:shadow-lg hover:bg-white hover:text-blue-700 focus:bg-blue-600 focus:shadow-none active:bg-blue-600 active:shadow-none disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none"
           onClick={(e) => e.stopPropagation()}
+          className="inline-block rounded-md bg-cyan-600 py-2 px-4 border border-transparent text-center text-sm text-white
+                     shadow-md transition-all duration-200 hover:shadow-lg hover:bg-white hover:text-cyan-700
+                     focus:bg-cyan-700 focus:shadow-none active:bg-cyan-700 active:shadow-none disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none"
         >
           Read more
         </a>
