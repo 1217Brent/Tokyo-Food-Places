@@ -13,18 +13,19 @@ import fetchNearbyRestaurants from "../hooks/fetchRestaurants";
 
 type Coords = typeof currentCoordinates;
 
+const UNIVERSITY_COORDINATES: Record<string, Coords> = {
+  hitotsubashi: { lat: 35.694, lng: 139.4289 },
+  waseda: { lat: 35.709, lng: 139.7198 },
+  keio: { lat: 35.6479, lng: 139.7464 },
+};
+
 function App(): JSX.Element {
   const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null);
   const [foodLocations, setFoodLocations] = useState<google.maps.places.PlaceResult[]>([]);
   const [filteredFoodList, setFilteredFoodList] = useState<google.maps.places.PlaceResult[]>([]);
   const [currCoords, setCurrCoords] = useState<Coords>(currentCoordinates);
   const [selectedUniversity, setSelectedUniversity] = useState("hitotsubashi");
-
-  const universityCoordinates: Record<string, Coords> = useMemo(() => ({
-    hitotsubashi: { lat: 35.694, lng: 139.4289 },
-    waseda: { lat: 35.709, lng: 139.7198 },
-    keio: { lat: 35.6479, lng: 139.7464 },
-  }), []);
+  const [isLoading, setIsLoading] = useState(false);
 
   // This function receives the Map instance from InitMap
   const handleMapUpdate = useCallback((map: google.maps.Map | null) => {
@@ -35,14 +36,30 @@ function App(): JSX.Element {
   useEffect(() => {
     if (!mapInstance || !currCoords) return;
 
+    let isCancelled = false;
+    setIsLoading(true);
+
     fetchNearbyRestaurants(mapInstance, currCoords)
       .then((restaurants) => {
-        setFoodLocations(restaurants);
-        setFilteredFoodList(restaurants);
+        if (!isCancelled) {
+          setFoodLocations(restaurants);
+          setFilteredFoodList(restaurants);
+        }
       })
       .catch((error) => {
-        console.error("Failed to fetch restaurants:", error);
+        if (!isCancelled) {
+          console.error("Failed to fetch restaurants:", error);
+        }
+      })
+      .finally(() => {
+        if (!isCancelled) {
+          setIsLoading(false);
+        }
       });
+
+    return () => {
+      isCancelled = true;
+    };
   }, [mapInstance, currCoords]);
 
   const handleRestaurantsUpdate = useCallback(
@@ -53,27 +70,37 @@ function App(): JSX.Element {
 
   const handleDropDown = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
     const selected = e.target.value;
-    const newCoords = universityCoordinates[selected];
+    const newCoords = UNIVERSITY_COORDINATES[selected];
     if (newCoords) {
       setSelectedUniversity(selected);
       setCurrCoords(newCoords);
     }
-  }, [universityCoordinates]);
+  }, []);
 
+  // Debounced search to reduce re-renders
   const handleSearchBar = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target.value.trim().toLowerCase();
+    
     if (!input) {
       setFilteredFoodList(foodLocations);
       return;
     }
-    setFilteredFoodList(
-      foodLocations.filter(place => place.name?.toLowerCase().includes(input))
-    );
+    
+    // Use requestAnimationFrame to defer filtering
+    requestAnimationFrame(() => {
+      const filtered = foodLocations.filter(place => 
+        place.name?.toLowerCase().includes(input)
+      );
+      setFilteredFoodList(filtered);
+    });
   }, [foodLocations]);
 
   const handleSelectFoodPlace = useCallback((coords: Coords) => {
     setCurrCoords(coords);
   }, []);
+
+  // Memoize the restaurant count to prevent unnecessary re-renders
+  const restaurantCount = useMemo(() => filteredFoodList.length, [filteredFoodList.length]);
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-950">
@@ -86,8 +113,9 @@ function App(): JSX.Element {
           alt="Food Hero"
           className="absolute inset-0 w-full h-full object-cover"
           priority
-          height={256}
-          width={256}
+          height={800}
+          width={1200}
+          sizes="100vw"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-slate-900/60 via-slate-900/70 to-slate-900/90" />
         <div className="relative z-10 flex flex-col items-center justify-center text-center h-full px-6">
@@ -164,10 +192,16 @@ function App(): JSX.Element {
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-2xl font-bold text-white">Restaurant Collection</h3>
                 <div className="text-slate-400 text-sm">
-                  {filteredFoodList.length} {filteredFoodList.length === 1 ? 'restaurant' : 'restaurants'} found
+                  {restaurantCount} {restaurantCount === 1 ? 'restaurant' : 'restaurants'} found
                 </div>
               </div>
-              {filteredFoodList.length > 0 ? (
+              
+              {isLoading ? (
+                <div className="text-center py-20">
+                  <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-400 mx-auto"></div>
+                  <p className="text-slate-400 mt-4">Loading restaurants...</p>
+                </div>
+              ) : filteredFoodList.length > 0 ? (
                 <div className="h-[600px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800 rounded-2xl">
                   <FoodPlaceList
                     foodplaces={filteredFoodList}
