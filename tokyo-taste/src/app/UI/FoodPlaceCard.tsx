@@ -21,6 +21,7 @@ export function FoodPlaceCard({
           src={image}
           alt={name}
           fill
+          sizes="(max-width: 768px) 100vw, 33vw"
           style={{ objectFit: "cover" }}
           priority
           className="rounded-lg"
