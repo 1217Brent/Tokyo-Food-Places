@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useLoadScript } from "@react-google-maps/api";
 import debounce from "lodash/debounce";
 import fetchNearbyRestaurants from "../hooks/fetchRestaurants";
+import MarkerModal from "../components/markerModal";
+import ReactDOMServer from "react-dom/server";
 
 const containerStyle = { width: "100%", height: "500px" };
 
@@ -30,9 +32,37 @@ export default function InitMap({
 
   const mapRef = useRef<google.maps.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const [allRestaurants, setAllRestaurants] = useState<
+    google.maps.places.PlaceResult[]
+  >([]);
   const markersRef = useRef<google.maps.Marker[]>([]);
   const currCoordsRef = useRef(currCoords);
-  const fetchMarkersDebounced = useRef<ReturnType<typeof debounce> | null>(null);
+  const fetchMarkersDebounced = useRef<ReturnType<typeof debounce> | null>(
+    null
+  );
+
+  const fetchRestaurantByCoordinate = (
+    coordinates: Coords,
+    restaurants: google.maps.places.PlaceResult[]
+  ): google.maps.places.PlaceResult | null => {
+    const targetLat = Math.ceil(coordinates.lat);
+    const targetLng = Math.ceil(coordinates.lng);
+  
+    const restaurant = restaurants.find((place) => {
+      if (!place.geometry?.location) return false;
+  
+      const lat = Math.ceil(place.geometry.location.lat());
+      const lng = Math.ceil(place.geometry.location.lng());
+  
+      return lat === targetLat && lng === targetLng;
+    });
+  
+    if (restaurant) return restaurant;
+  
+    console.warn("Failed to fetch restaurant by coordinates");
+    return null; 
+  };
+  
 
   // Keep latest currCoords in ref for debounced function
   useEffect(() => {
@@ -53,13 +83,13 @@ export default function InitMap({
 
   // Create debounced fetchMarkers once on mount
   useEffect(() => {
-    fetchMarkersDebounced.current = debounce(() => {
+    fetchMarkersDebounced.current = debounce(async () => {
       if (!mapRef.current) return;
 
       fetchNearbyRestaurants(mapRef.current, currCoordsRef.current)
         .then((restaurants) => {
           onRestaurantsUpdate(restaurants);
-
+          setAllRestaurants(restaurants);
           // Clear old markers
           markersRef.current.forEach((marker) => marker.setMap(null));
           markersRef.current = [];
@@ -72,6 +102,36 @@ export default function InitMap({
               map: mapRef.current!,
               title: place.name || "",
             });
+            const photoUrl: string =
+              place.photos?.[0]?.getUrl({ maxWidth: 400, maxHeight: 300 }) ||
+              "";
+
+            const infoWindow = new google.maps.InfoWindow({
+              content: ReactDOMServer.renderToString(
+                <MarkerModal
+                  name={place.name || "Image Unavailable"}
+                  image={photoUrl}
+                  link={place.url || ""}
+                />
+              ),
+            });
+            marker.addListener("click", () => {
+              infoWindow.open({
+                anchor: marker,
+                map: mapRef.current,
+                shouldFocus: false, // Optional: prevent focus on InfoWindow
+              });
+            });
+            marker.addListener("mouseon", () => {
+              infoWindow.open({
+                anchor: marker,
+                map: mapRef.current,
+                shouldFocus: false, // Optional: prevent focus on InfoWindow
+              });
+            });
+            marker.addListener("mouseout", function () {
+              infoWindow.close();
+            });
             markersRef.current.push(marker);
           });
         })
@@ -79,7 +139,6 @@ export default function InitMap({
           console.error("Error fetching restaurants:", error);
         });
     }, 300);
-
     return () => {
       if (fetchMarkersDebounced.current) {
         fetchMarkersDebounced.current.cancel();
@@ -101,6 +160,29 @@ export default function InitMap({
 
     mapRef.current.panTo(currCoords);
     fetchMarkersDebounced.current();
+    const place = fetchRestaurantByCoordinate(currCoords, allRestaurants);
+    const photoUrl: string =
+    place?.photos?.[0]?.getUrl({ maxWidth: 400, maxHeight: 300 }) ||
+    "";
+    const marker = new window.google.maps.Marker({
+      position: place?.geometry?.location,
+      map: mapRef.current!,
+      title: place?.name || "",
+    });
+    const infoWindow = new google.maps.InfoWindow({
+      content: ReactDOMServer.renderToString(
+        <MarkerModal
+          name={place?.name || "Image Unavailable"}
+          image={photoUrl}
+          link={place?.url || ""}
+        />
+      ),
+    });
+    infoWindow.open({
+      anchor: marker,
+      map: mapRef.current,
+      shouldFocus: false, // Optional: prevent focus on InfoWindow
+    });
   }, [currCoords]);
 
   // Trigger initial fetch once map is ready
