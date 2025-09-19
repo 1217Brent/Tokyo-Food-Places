@@ -1,9 +1,9 @@
-let mapInstance: google.maps.Map | null = null;
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export function setMapInstance(map: google.maps.Map) {
-  mapInstance = map;
+export async function setMapInstance(map: google.maps.Map) {
+  await AsyncStorage.setItem('@map', JSON.stringify(map));
 }
 
-export function getMapInstance(): google.maps.Map | null {
-  return mapInstance;
+export async function getMapInstance(): Promise<string | null> {
+  return await AsyncStorage.getItem('@map');
 }
