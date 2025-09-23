@@ -1,12 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { JSX } from "react";
 
 type SearchBarProps = {
   onSearch: (e: React.ChangeEvent<HTMLInputElement>) => void;
 };
 
-export default function SearchBar({ onSearch }: SearchBarProps) {
+export default function SearchBar<T extends SearchBarProps>({ onSearch }: T): JSX.Element {
   return (
     <div className="relative w-full">
       <input

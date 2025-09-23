@@ -6,6 +6,7 @@ import debounce from "lodash/debounce";
 import fetchNearbyRestaurants from "../hooks/fetchRestaurants";
 import MarkerModal from "../components/markerModal";
 import ReactDOMServer from "react-dom/server";
+import { fetchRestaurantByCoordinate } from "../hooks/fetchRestaurantByCoordinate";
 
 const containerStyle = { width: "100%", height: "500px" };
 
@@ -16,7 +17,7 @@ interface Coords {
 
 interface InitMapProps {
   currCoords: Coords;
-  handleMapUpdate: (map: google.maps.Map | null) => void;
+  handleMapUpdate: (map: google.maps.Map) => void;
   onRestaurantsUpdate: (restaurants: google.maps.places.PlaceResult[]) => void;
 }
 
@@ -37,39 +38,17 @@ export default function InitMap({
   >([]);
   const markersRef = useRef<google.maps.Marker[]>([]);
   const currCoordsRef = useRef(currCoords);
-  const fetchMarkersDebounced = useRef<ReturnType<typeof debounce> | null>(
-    null
-  );
+  const fetchMarkersDebounced = useRef<ReturnType<typeof debounce> | null>(null);
 
-  const fetchRestaurantByCoordinate = (
-    coordinates: Coords,
-    restaurants: google.maps.places.PlaceResult[]
-  ): google.maps.places.PlaceResult | null => {
-    const targetLat = Math.ceil(coordinates.lat);
-    const targetLng = Math.ceil(coordinates.lng);
-  
-    const restaurant = restaurants.find((place) => {
-      if (!place.geometry?.location) return false;
-  
-      const lat = Math.ceil(place.geometry.location.lat());
-      const lng = Math.ceil(place.geometry.location.lng());
-  
-      return lat === targetLat && lng === targetLng;
-    });
-  
-    if (restaurant) return restaurant;
-  
-    console.warn("Failed to fetch restaurant by coordinates");
-    return null; 
-  };
-  
+  // Track currently open InfoWindow
+  const openInfoWindowRef = useRef<google.maps.InfoWindow | null>(null);
 
-  // Keep latest currCoords in ref for debounced function
+  // Keep latest coords
   useEffect(() => {
     currCoordsRef.current = currCoords;
   }, [currCoords]);
 
-  // Initialize map once
+  // Initialize map
   useEffect(() => {
     if (!isLoaded || !mapContainerRef.current) return;
     if (!mapRef.current) {
@@ -81,108 +60,80 @@ export default function InitMap({
     }
   }, [isLoaded, handleMapUpdate, currCoords]);
 
-  // Create debounced fetchMarkers once on mount
+  // Fetch and display markers
   useEffect(() => {
     fetchMarkersDebounced.current = debounce(async () => {
       if (!mapRef.current) return;
 
-      fetchNearbyRestaurants(mapRef.current, currCoordsRef.current)
-        .then((restaurants) => {
-          onRestaurantsUpdate(restaurants);
-          setAllRestaurants(restaurants);
-          // Clear old markers
-          markersRef.current.forEach((marker) => marker.setMap(null));
-          markersRef.current = [];
+      try {
+        const restaurants = await fetchNearbyRestaurants(
+          mapRef.current,
+          currCoordsRef.current
+        );
+        onRestaurantsUpdate(restaurants);
+        setAllRestaurants(restaurants);
 
-          // Add new markers
-          restaurants.forEach((place) => {
-            if (!place.geometry?.location) return;
-            const marker = new window.google.maps.Marker({
-              position: place.geometry.location,
-              map: mapRef.current!,
-              title: place.name || "",
-            });
-            const photoUrl: string =
-              place.photos?.[0]?.getUrl({ maxWidth: 400, maxHeight: 300 }) ||
-              "";
+        // Clear old markers
+        markersRef.current.forEach((marker) => marker.setMap(null));
+        markersRef.current = [];
 
-            const infoWindow = new google.maps.InfoWindow({
-              content: ReactDOMServer.renderToString(
-                <MarkerModal
-                  name={place.name || "Image Unavailable"}
-                  image={photoUrl}
-                  link={place.url || ""}
-                />
-              ),
-            });
-            marker.addListener("click", () => {
-              infoWindow.open({
-                anchor: marker,
-                map: mapRef.current,
-                shouldFocus: false, // Optional: prevent focus on InfoWindow
-              });
-            });
-            marker.addListener("mouseon", () => {
-              infoWindow.open({
-                anchor: marker,
-                map: mapRef.current,
-                shouldFocus: false, // Optional: prevent focus on InfoWindow
-              });
-            });
-            marker.addListener("mouseout", function () {
-              infoWindow.close();
-            });
-            markersRef.current.push(marker);
+        // Add new markers
+        restaurants.forEach((place) => {
+          if (!place.geometry?.location) return;
+
+          const marker = new window.google.maps.Marker({
+            position: place.geometry.location,
+            map: mapRef.current!,
+            title: place.name || "",
           });
-        })
-        .catch((error) => {
-          console.error("Error fetching restaurants:", error);
+
+          const photoUrl: string =
+            place.photos?.[0]?.getUrl({ maxWidth: 400, maxHeight: 300 }) || "";
+
+          const infoWindow = new window.google.maps.InfoWindow({
+            content: ReactDOMServer.renderToString(
+              <MarkerModal
+                name={place.name || "Image Unavailable"}
+                image={photoUrl}
+                link={place.url || ""}
+              />
+            ),
+          });
+          //so if the user clicks on it let us stay open
+          //so if the user hovers it and openInfoWindow.current does not exist then we open it
+          marker.addListener("click", () => {
+            if (openInfoWindowRef.current) {
+              // then we must close first
+              openInfoWindowRef.current.close();
+            } // then we open a new one
+            infoWindow.open({ anchor: marker, map: mapRef.current});
+            openInfoWindowRef.current = infoWindow;
+          });
+          // then if openInfoWindowRef does not exist then on hover we can open it
+          marker.addListener("mouseover", () => {
+            if (!openInfoWindowRef.current) {
+              infoWindow.open({anchor: marker, map: mapRef.current});
+              openInfoWindowRef.current = infoWindow;
+            }
+          })
+
+          markersRef.current.push(marker);
         });
-    }, 300);
-    return () => {
-      if (fetchMarkersDebounced.current) {
-        fetchMarkersDebounced.current.cancel();
+      } catch (error) {
+        console.error("Error fetching restaurants:", error);
       }
+    }, 300);
+
+    return () => {
+      fetchMarkersDebounced.current?.cancel();
     };
   }, [onRestaurantsUpdate]);
 
-  // Pan map and fetch markers on coords change
+  // Pan map on coords change
   useEffect(() => {
-    if (
-      !mapRef.current ||
-      !fetchMarkersDebounced.current ||
-      typeof currCoords.lat !== "number" ||
-      typeof currCoords.lng !== "number" ||
-      !isFinite(currCoords.lat) ||
-      !isFinite(currCoords.lng)
-    )
-      return;
-
+    if (!mapRef.current) return;
     mapRef.current.panTo(currCoords);
-    fetchMarkersDebounced.current();
-    const place = fetchRestaurantByCoordinate(currCoords, allRestaurants);
-    const photoUrl: string =
-    place?.photos?.[0]?.getUrl({ maxWidth: 400, maxHeight: 300 }) ||
-    "";
-    const marker = new window.google.maps.Marker({
-      position: place?.geometry?.location,
-      map: mapRef.current!,
-      title: place?.name || "",
-    });
-    const infoWindow = new google.maps.InfoWindow({
-      content: ReactDOMServer.renderToString(
-        <MarkerModal
-          name={place?.name || "Image Unavailable"}
-          image={photoUrl}
-          link={place?.url || ""}
-        />
-      ),
-    });
-    infoWindow.open({
-      anchor: marker,
-      map: mapRef.current,
-      shouldFocus: false, // Optional: prevent focus on InfoWindow
-    });
+    fetchMarkersDebounced.current?.();
   }, [currCoords]);
 
   // Trigger initial fetch once map is ready

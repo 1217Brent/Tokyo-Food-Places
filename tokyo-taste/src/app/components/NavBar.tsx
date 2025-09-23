@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, JSX } from "react";
 
-export default function NavBar() {
+export default function NavBar(): JSX.Element {
     const [isScrolled, setIsScrolled] = useState(false);
 
     useEffect(() => {

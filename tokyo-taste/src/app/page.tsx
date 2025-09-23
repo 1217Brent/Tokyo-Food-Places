@@ -15,16 +15,23 @@ type Coords = typeof currentCoordinates;
 
 function App(): JSX.Element {
   const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null);
-  const [foodLocations, setFoodLocations] = useState<google.maps.places.PlaceResult[]>([]);
-  const [filteredFoodList, setFilteredFoodList] = useState<google.maps.places.PlaceResult[]>([]);
+  const [foodLocations, setFoodLocations] = useState<
+    google.maps.places.PlaceResult[]
+  >([]);
+  const [filteredFoodList, setFilteredFoodList] = useState<
+    google.maps.places.PlaceResult[]
+  >([]);
   const [currCoords, setCurrCoords] = useState<Coords>(currentCoordinates);
   const [selectedUniversity, setSelectedUniversity] = useState("hitotsubashi");
 
-  const universityCoordinates: Record<string, Coords> = useMemo(() => ({
-    hitotsubashi: { lat: 35.694, lng: 139.4289 },
-    waseda: { lat: 35.709, lng: 139.7198 },
-    keio: { lat: 35.6479, lng: 139.7464 },
-  }), []);
+  const universityCoordinates: Record<string, Coords> = useMemo(
+    () => ({
+      hitotsubashi: { lat: 35.694, lng: 139.4289 },
+      waseda: { lat: 35.709, lng: 139.7198 },
+      keio: { lat: 35.6479, lng: 139.7464 },
+    }),
+    []
+  );
 
   const handleMapUpdate = useCallback((map: google.maps.Map | null) => {
     setMapInstance(map);
@@ -47,29 +54,39 @@ function App(): JSX.Element {
     (restaurants: google.maps.places.PlaceResult[]) => {
       setFoodLocations(restaurants);
       setFilteredFoodList(restaurants);
-    }, []);
+    },
+    []
+  );
 
-  const handleDropDown = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selected = e.target.value;
-    const newCoords = universityCoordinates[selected];
-    if (newCoords) {
-      setSelectedUniversity(selected);
-      setCurrCoords(newCoords);
-    }
-  }, [universityCoordinates]);
+  const handleDropDown = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const selected = e.target.value;
+      const newCoords = universityCoordinates[selected];
+      if (newCoords) {
+        setSelectedUniversity(selected);
+        setCurrCoords(newCoords);
+      }
+    },
+    [universityCoordinates]
+  );
 
-  const handleSearchBar = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const input = e.target.value.trim().toLowerCase();
-    if (!input) {
-      setFilteredFoodList(foodLocations);
-      return;
-    }
-    setFilteredFoodList(
-      foodLocations.filter(place => place.name?.toLowerCase().includes(input))
-    );
-  }, [foodLocations]);
+  const handleSearchBar = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const input = e.target.value.trim().toLowerCase();
+      if (!input) {
+        setFilteredFoodList(foodLocations);
+        return;
+      }
+      setFilteredFoodList(
+        foodLocations.filter((place) =>
+          place.name?.toLowerCase().includes(input)
+        )
+      );
+    },
+    [foodLocations]
+  );
 
-  const handleSelectFoodPlace = useCallback((coords: Coords) => {
+  const handleSelectFoodPlace = useCallback((coords: Coords): void => {
     setCurrCoords(coords);
   }, []);
 
@@ -96,7 +113,10 @@ function App(): JSX.Element {
               キャンパスに近いレストラン
             </p>
             <div className="mt-5">
-              <DropDown value={selectedUniversity} handleChange={handleDropDown} />
+              <DropDown
+                value={selectedUniversity}
+                handleChange={handleDropDown}
+              />
             </div>
           </div>
         </div>
@@ -125,7 +145,10 @@ function App(): JSX.Element {
         </div>
       </section>
 
-      <section id="list-section" className="w-full bg-gradient-to-br from-blue-900 via-slate-900 to-[#0f172a]">
+      <section
+        id="list-section"
+        className="w-full bg-gradient-to-br from-blue-900 via-slate-900 to-[#0f172a]"
+      >
         <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-24 py-16">
           <div className="text-center mb-12">
             <h2 className="text-4xl md:text-5xl font-bold text-cyan-400 mb-6">
@@ -143,18 +166,18 @@ function App(): JSX.Element {
             </div>
           </div>
 
-          <div className="bg-slate-900/90 backdrop-blur-md rounded-3xl shadow-lg overflow-hidden border border-cyan-600/60">
+          <div className="bg-slate-900/90 h-[700px] backdrop-blur-md rounded-3xl shadow-lg overflow-hidden border border-cyan-600/60">
             <div className="p-8">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-bold text-cyan-400">Restaurant Collection</h3>
+                <h3 className="text-2xl font-bold text-cyan-400">
+                  Restaurant Collection
+                </h3>
               </div>
               {filteredFoodList.length > 0 ? (
-                <div className="h-[600px] overflow-y-auto scrollbar-thin scrollbar-thumb-cyan-600 scrollbar-track-slate-800 rounded-2xl">
-                  <FoodPlaceList
-                    foodplaces={filteredFoodList}
-                    handleSelectCoordinates={handleSelectFoodPlace}
-                  />
-                </div>
+                <FoodPlaceList
+                  foodplaces={filteredFoodList}
+                  handleSelectCoordinates={handleSelectFoodPlace}
+                />
               ) : (
                 <p className="text-center text-slate-500 py-20">
                   No restaurants found.
