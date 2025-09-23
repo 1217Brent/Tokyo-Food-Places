@@ -15,6 +15,14 @@ interface Coords {
   lng: number;
 }
 
+
+type MarkerProps = {
+  name: string;
+  image: string;
+  rating: number | undefined;
+  address: string;
+}
+
 interface InitMapProps {
   currCoords: Coords;
   handleMapUpdate: (map: google.maps.Map) => void;
@@ -30,23 +38,64 @@ export default function InitMap({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
     libraries: ["places"],
   });
-
+  const firstRender = useRef(true);
   const mapRef = useRef<google.maps.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const [allRestaurants, setAllRestaurants] = useState<
     google.maps.places.PlaceResult[]
   >([]);
+
   const markersRef = useRef<google.maps.Marker[]>([]);
-  const currCoordsRef = useRef(currCoords);
-  const fetchMarkersDebounced = useRef<ReturnType<typeof debounce> | null>(null);
+  const currCoordsRef = useRef<Coords>(currCoords);
+  const fetchMarkersDebounced = useRef<ReturnType<typeof debounce> | null>(
+    null
+  );
 
   // Track currently open InfoWindow
   const openInfoWindowRef = useRef<google.maps.InfoWindow | null>(null);
-
-  // Keep latest coords
+  //currCoords changes whenever FoodPlaceCard is clicked and allRestraunts changes
   useEffect(() => {
+    if (!window.google || allRestaurants.length === 0) return;
+
+    if (firstRender.current) {
+      firstRender.current = false; // mark no longer first render
+      return; // skip on first render
+    }
+    console.log("CurRCOORDS:", currCoords);
     currCoordsRef.current = currCoords;
-  }, [currCoords]);
+    const selectedPlace = fetchRestaurantByCoordinate(currCoords, allRestaurants);
+    console.log("selectedPlace", selectedPlace);
+    const photoUrl = selectedPlace?.photos?.[0]?.getUrl({ maxWidth: 400, maxHeight: 300 }) || "";
+    console.log("url:", selectedPlace?.url, "photo:", photoUrl);
+    const infoWindow = new window.google.maps.InfoWindow({
+      content: ReactDOMServer.renderToString(
+        <MarkerModal<MarkerProps>
+          name={selectedPlace?.name || "Image Unavailable"}
+          image={photoUrl}
+          rating={selectedPlace?.rating}
+          address={selectedPlace?.formatted_address || ""}
+        />
+      ),
+    });
+    if (openInfoWindowRef.current) {
+      openInfoWindowRef.current.close();
+    }
+    const marker = markersRef.current.find(
+      (m) =>
+        m.getPosition()?.lat() === selectedPlace?.geometry?.location?.lat() &&
+        m.getPosition()?.lng() === selectedPlace?.geometry?.location?.lng()
+    );
+    if (marker) {
+      infoWindow.open({ anchor: marker, map: mapRef.current });
+      openInfoWindowRef.current = infoWindow;
+    }
+  }, [currCoords, allRestaurants]);
+  
+
+  // so when the user clicks on the FoodCard we need to get that place's coordinates
+  // so after the Food Place Card gets clicked the current coordinates update
+  // so currCoords updates.
+
 
   // Initialize map
   useEffect(() => {
@@ -95,7 +144,8 @@ export default function InitMap({
               <MarkerModal
                 name={place.name || "Image Unavailable"}
                 image={photoUrl}
-                link={place.url || ""}
+                rating={place.rating}
+                address={place.formatted_address || ""}
               />
             ),
           });
@@ -106,16 +156,16 @@ export default function InitMap({
               // then we must close first
               openInfoWindowRef.current.close();
             } // then we open a new one
-            infoWindow.open({ anchor: marker, map: mapRef.current});
+            infoWindow.open({ anchor: marker, map: mapRef.current });
             openInfoWindowRef.current = infoWindow;
           });
           // then if openInfoWindowRef does not exist then on hover we can open it
           marker.addListener("mouseover", () => {
             if (!openInfoWindowRef.current) {
-              infoWindow.open({anchor: marker, map: mapRef.current});
+              infoWindow.open({ anchor: marker, map: mapRef.current });
               openInfoWindowRef.current = infoWindow;
             }
-          })
+          });
 
           markersRef.current.push(marker);
         });

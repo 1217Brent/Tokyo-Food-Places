@@ -58,6 +58,13 @@ function App(): JSX.Element {
     []
   );
 
+  const scrollToMap = () => {
+    const map = document.getElementById("map-section");
+    if (map) {
+      map.scrollIntoView({behavior: "smooth"});
+    }
+  }
+
   const handleDropDown = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
       const selected = e.target.value;
@@ -65,6 +72,7 @@ function App(): JSX.Element {
       if (newCoords) {
         setSelectedUniversity(selected);
         setCurrCoords(newCoords);
+        scrollToMap();
       }
     },
     [universityCoordinates]
@@ -89,6 +97,7 @@ function App(): JSX.Element {
   const handleSelectFoodPlace = useCallback((coords: Coords): void => {
     setCurrCoords(coords);
   }, []);
+  
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-900 text-slate-300">

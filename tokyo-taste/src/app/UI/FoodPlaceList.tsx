@@ -1,14 +1,25 @@
 "use client";
 
-import { JSX } from "react";
-import { FoodPlaceCard } from "./FoodPlaceCard";
+import { JSX, MouseEventHandler } from "react";
+import FoodPlaceCard from "./FoodPlaceCard";
 
 interface FoodPlaceListProps {
   foodplaces: google.maps.places.PlaceResult[];
   handleSelectCoordinates: (coordinates: google.maps.LatLngLiteral) => void;
 }
 
-function FoodPlaceList({ foodplaces, handleSelectCoordinates }: FoodPlaceListProps): JSX.Element {
+function scrollToMap(): MouseEventHandler<HTMLDivElement> | undefined {
+  const map = document.getElementById("map-section");
+  if (map) {
+    map.scrollIntoView({ behavior: "smooth" });
+  }
+  return undefined;
+}
+
+function FoodPlaceList({
+  foodplaces,
+  handleSelectCoordinates,
+}: FoodPlaceListProps): JSX.Element {
   return (
     <div className="flex overflow-x-auto w-full">
       <div className="flex flex-nowrap gap-6 min-w-fit">
@@ -20,14 +31,23 @@ function FoodPlaceList({ foodplaces, handleSelectCoordinates }: FoodPlaceListPro
               name: foodplace.name || "",
               image: (foodplace.photos && foodplace.photos[0]?.getUrl()) || "",
               description: foodplace.vicinity || "",
-              link: foodplace.place_id
-                ? `https://www.google.com/maps/place/?q=place_id:${foodplace.place_id}`
+              rating: foodplace.rating || 0,
+              link: foodplace.name
+                ? `https://www.google.com/search?q=${encodeURIComponent(
+                    foodplace.name + " tabelog"
+                  )}`
                 : "",
             }}
             handleCoordsChange={() => {
               const coords = foodplace.geometry?.location;
               if (coords) {
-                handleSelectCoordinates({ lat: coords.lat(), lng: coords.lng() });
+                handleSelectCoordinates({
+                  lat: coords.lat(),
+                  lng: coords.lng(),
+                });
+                scrollToMap();
+                console.log("should be scrolled");
+                console.log(scrollToMap);
               }
             }}
           />

@@ -1,14 +1,12 @@
-"use client";
-
 import { JSX } from "react";
 import { FoodPlaceCardProps } from "../dataTypes/FoodCardProps";
 import Image from "next/image";
 
-export function FoodPlaceCard({
+function FoodPlaceCard({
   foodplace,
   handleCoordsChange,
 }: FoodPlaceCardProps): JSX.Element {
-  const { name, image, description, link } = foodplace;
+  const { name, image, description, link, rating } = foodplace;
 
   return (
     <div
@@ -34,6 +32,9 @@ export function FoodPlaceCard({
         <p className="text-slate-300 leading-relaxed font-light line-clamp-3">
           {description}
         </p>
+        {rating !== undefined && (
+          <p className="text-yellow-400 font-semibold mt-1">Rating: {rating.toFixed(1)} ★</p>
+        )}
       </div>
       <div className="px-4 pb-4 pt-0 mt-2">
         <a
@@ -51,3 +52,5 @@ export function FoodPlaceCard({
     </div>
   );
 }
+
+export default FoodPlaceCard;

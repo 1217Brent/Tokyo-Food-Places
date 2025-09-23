@@ -1,6 +1,13 @@
-import { JSX } from "react";
+import { JSX, MouseEventHandler } from "react";
 
 function Footer(): JSX.Element {
+  const scrollToMap = (id: string): MouseEventHandler<HTMLButtonElement> | undefined => {
+    const map = document.getElementById(id);
+    if (map) {
+      map.scrollIntoView({behavior: "smooth"});
+    }
+    return undefined;
+  }
   return (
     <footer className="relative mt-auto">
       {/* Gradient fade effect */}
@@ -26,15 +33,12 @@ function Footer(): JSX.Element {
             <div className="text-center md:text-right">
               <h4 className="text-white font-semibold mb-3">Quick Links</h4>
               <div className="space-y-2">
-                <a href="#map-section" className="block text-slate-400 hover:text-blue-300 transition-colors duration-200 text-sm">
+                <button onClick={() => scrollToMap("map-section")} className="block text-slate-400 hover:text-blue-300 transition-colors duration-200 text-sm">
                   Restaurant Map
-                </a>
-                <a href="#list-section" className="block text-slate-400 hover:text-blue-300 transition-colors duration-200 text-sm">
+                </button>
+                <button onClick={() => scrollToMap("list-section")} className="block text-slate-400 hover:text-blue-300 transition-colors duration-200 text-sm">
                   Full List
-                </a>
-                <a href="#about" className="block text-slate-400 hover:text-blue-300 transition-colors duration-200 text-sm">
-                  About Us
-                </a>
+                </button>
               </div>
             </div>
           </div>
