@@ -11,7 +11,12 @@ import DropDown from "./components/DropDown";
 import Image from "next/image";
 import fetchNearbyRestaurants from "./hooks/fetchRestaurants";
 
-type Coords = typeof currentCoordinates;
+// Update the Coords interface to include place_id
+interface Coords {
+  lat: number;
+  lng: number;
+  place_id?: string;
+}
 
 function App(): JSX.Element {
   const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null);
@@ -21,7 +26,7 @@ function App(): JSX.Element {
   const [filteredFoodList, setFilteredFoodList] = useState<
     google.maps.places.PlaceResult[]
   >([]);
-  const [currCoords, setCurrCoords] = useState<Coords>(currentCoordinates);
+  const [currCoords, setCurrCoords] = useState<Coords & { place_id?: string }>(currentCoordinates);
   const [selectedUniversity, setSelectedUniversity] = useState("hitotsubashi");
 
   const universityCoordinates: Record<string, Coords> = useMemo(
@@ -61,9 +66,9 @@ function App(): JSX.Element {
   const scrollToMap = () => {
     const map = document.getElementById("map-section");
     if (map) {
-      map.scrollIntoView({behavior: "smooth"});
+      map.scrollIntoView({ behavior: "smooth" });
     }
-  }
+  };
 
   const handleDropDown = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -85,6 +90,7 @@ function App(): JSX.Element {
         setFilteredFoodList(foodLocations);
         return;
       }
+
       setFilteredFoodList(
         foodLocations.filter((place) =>
           place.name?.toLowerCase().includes(input)
@@ -95,14 +101,14 @@ function App(): JSX.Element {
   );
 
   const handleSelectFoodPlace = useCallback((coords: Coords): void => {
+    console.log("Selected restaurant coords:", coords);
     setCurrCoords(coords);
+    scrollToMap();
   }, []);
-  
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-900 text-slate-300">
       <NavBar />
-
       <section className="relative w-full h-[80vh] overflow-hidden">
         <Image
           src="/hitotsubashi.jpg"
@@ -122,10 +128,7 @@ function App(): JSX.Element {
               キャンパスに近いレストラン
             </p>
             <div className="mt-5">
-              <DropDown
-                value={selectedUniversity}
-                handleChange={handleDropDown}
-              />
+              <DropDown value={selectedUniversity} handleChange={handleDropDown} />
             </div>
           </div>
         </div>
@@ -141,7 +144,6 @@ function App(): JSX.Element {
               Check out the nearest places to eat!
             </p>
           </div>
-
           <div className="bg-slate-900 rounded-3xl shadow-lg overflow-hidden border border-slate-700">
             <div className="p-8">
               <InitMap

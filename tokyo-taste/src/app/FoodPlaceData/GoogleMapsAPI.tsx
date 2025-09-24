@@ -1,26 +1,21 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { useLoadScript } from "@react-google-maps/api";
 import debounce from "lodash/debounce";
 import fetchNearbyRestaurants from "../hooks/fetchRestaurants";
 import MarkerModal from "../components/markerModal";
 import ReactDOMServer from "react-dom/server";
-import { fetchRestaurantByCoordinate } from "../hooks/fetchRestaurantByCoordinate";
 
-const containerStyle = { width: "100%", height: "500px" };
+const containerStyle = {
+  width: "100%",
+  height: "500px"
+};
 
 interface Coords {
   lat: number;
   lng: number;
-}
-
-
-type MarkerProps = {
-  name: string;
-  image: string;
-  rating: number | undefined;
-  address: string;
+  place_id?: string;
 }
 
 interface InitMapProps {
@@ -38,68 +33,40 @@ export default function InitMap({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
     libraries: ["places"],
   });
-  const firstRender = useRef(true);
+
   const mapRef = useRef<google.maps.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
-  const [allRestaurants, setAllRestaurants] = useState<
-    google.maps.places.PlaceResult[]
-  >([]);
-
-  const markersRef = useRef<google.maps.Marker[]>([]);
-  const currCoordsRef = useRef<Coords>(currCoords);
-  const fetchMarkersDebounced = useRef<ReturnType<typeof debounce> | null>(
-    null
-  );
-
-  // Track currently open InfoWindow
+  const markersRef = useRef<Map<string, { marker: google.maps.Marker; place: google.maps.places.PlaceResult }>>(new Map());
+  const fetchMarkersDebounced = useRef<ReturnType<typeof debounce> | null>(null);
   const openInfoWindowRef = useRef<google.maps.InfoWindow | null>(null);
-  //currCoords changes whenever FoodPlaceCard is clicked and allRestraunts changes
-  useEffect(() => {
-    if (!window.google || allRestaurants.length === 0) return;
 
-    if (firstRender.current) {
-      firstRender.current = false; // mark no longer first render
-      return; // skip on first render
-    }
-    console.log("CurRCOORDS:", currCoords);
-    currCoordsRef.current = currCoords;
-    const selectedPlace = fetchRestaurantByCoordinate(currCoords, allRestaurants);
-    console.log("selectedPlace", selectedPlace);
-    const photoUrl = selectedPlace?.photos?.[0]?.getUrl({ maxWidth: 400, maxHeight: 300 }) || "";
-    console.log("url:", selectedPlace?.url, "photo:", photoUrl);
+  // Function to create and show info window
+  const showInfoWindow = (marker: google.maps.Marker, place: google.maps.places.PlaceResult) => {
+    const photoUrl = place.photos?.[0]?.getUrl({ maxWidth: 400, maxHeight: 300 }) || "";
     const infoWindow = new window.google.maps.InfoWindow({
       content: ReactDOMServer.renderToString(
-        <MarkerModal<MarkerProps>
-          name={selectedPlace?.name || "Image Unavailable"}
+        <MarkerModal
+          name={place.name || "Image Unavailable"}
           image={photoUrl}
-          rating={selectedPlace?.rating}
-          address={selectedPlace?.formatted_address || ""}
+          rating={place.rating}
+          address={place.formatted_address || ""}
         />
       ),
     });
+
+    // Close any open info window first
     if (openInfoWindowRef.current) {
       openInfoWindowRef.current.close();
     }
-    const marker = markersRef.current.find(
-      (m) =>
-        m.getPosition()?.lat() === selectedPlace?.geometry?.location?.lat() &&
-        m.getPosition()?.lng() === selectedPlace?.geometry?.location?.lng()
-    );
-    if (marker) {
-      infoWindow.open({ anchor: marker, map: mapRef.current });
-      openInfoWindowRef.current = infoWindow;
-    }
-  }, [currCoords, allRestaurants]);
-  
 
-  // so when the user clicks on the FoodCard we need to get that place's coordinates
-  // so after the Food Place Card gets clicked the current coordinates update
-  // so currCoords updates.
+    // Open the new info window
+    infoWindow.open({ anchor: marker, map: mapRef.current });
+    openInfoWindowRef.current = infoWindow;
+  };
 
-
-  // Initialize map
   useEffect(() => {
     if (!isLoaded || !mapContainerRef.current) return;
+
     if (!mapRef.current) {
       mapRef.current = new window.google.maps.Map(mapContainerRef.current, {
         center: currCoords,
@@ -107,27 +74,23 @@ export default function InitMap({
       });
       handleMapUpdate(mapRef.current);
     }
-  }, [isLoaded, handleMapUpdate, currCoords]);
+  }, [isLoaded, handleMapUpdate]);
 
-  // Fetch and display markers
   useEffect(() => {
     fetchMarkersDebounced.current = debounce(async () => {
       if (!mapRef.current) return;
 
       try {
-        const restaurants = await fetchNearbyRestaurants(
-          mapRef.current,
-          currCoordsRef.current
-        );
+        console.log("Fetching restaurants for coordinates:", currCoords);
+        const restaurants = await fetchNearbyRestaurants(mapRef.current, currCoords);
         onRestaurantsUpdate(restaurants);
-        setAllRestaurants(restaurants);
 
-        // Clear old markers
-        markersRef.current.forEach((marker) => marker.setMap(null));
-        markersRef.current = [];
+        // Clear existing markers
+        markersRef.current.forEach(({ marker }) => marker.setMap(null));
+        markersRef.current.clear();
 
-        // Add new markers
-        restaurants.forEach((place) => {
+        // Create new markers
+        restaurants.forEach((place, index) => {
           if (!place.geometry?.location) return;
 
           const marker = new window.google.maps.Marker({
@@ -136,57 +99,90 @@ export default function InitMap({
             title: place.name || "",
           });
 
-          const photoUrl: string =
-            place.photos?.[0]?.getUrl({ maxWidth: 400, maxHeight: 300 }) || "";
-
-          const infoWindow = new window.google.maps.InfoWindow({
-            content: ReactDOMServer.renderToString(
-              <MarkerModal
-                name={place.name || "Image Unavailable"}
-                image={photoUrl}
-                rating={place.rating}
-                address={place.formatted_address || ""}
-              />
-            ),
-          });
-          //so if the user clicks on it let us stay open
-          //so if the user hovers it and openInfoWindow.current does not exist then we open it
           marker.addListener("click", () => {
-            if (openInfoWindowRef.current) {
-              // then we must close first
-              openInfoWindowRef.current.close();
-            } // then we open a new one
-            infoWindow.open({ anchor: marker, map: mapRef.current });
-            openInfoWindowRef.current = infoWindow;
+            showInfoWindow(marker, place);
           });
-          // then if openInfoWindowRef does not exist then on hover we can open it
+
           marker.addListener("mouseover", () => {
             if (!openInfoWindowRef.current) {
-              infoWindow.open({ anchor: marker, map: mapRef.current });
-              openInfoWindowRef.current = infoWindow;
+              showInfoWindow(marker, place);
             }
           });
 
-          markersRef.current.push(marker);
+          // Use multiple keys to store the marker for easier lookup
+          const placeId = place.place_id || "";
+          const placeName = place.name || "";
+          const indexKey = `index_${index}`;
+
+          console.log(`Storing marker ${index}:`, {
+            place_id: placeId,
+            name: placeName,
+            keys: [placeId, placeName, indexKey]
+          });
+
+          const markerData = { marker, place };
+          
+          // Store with multiple keys for easier lookup
+          if (placeId) markersRef.current.set(placeId, markerData);
+          if (placeName) markersRef.current.set(placeName, markerData);
+          markersRef.current.set(indexKey, markerData);
         });
+
+        console.log("All marker keys:", Array.from(markersRef.current.keys()));
       } catch (error) {
-        console.error("Error fetching restaurants:", error);
+        console.error(error);
       }
     }, 300);
 
     return () => {
       fetchMarkersDebounced.current?.cancel();
     };
-  }, [onRestaurantsUpdate]);
+  }, [currCoords, onRestaurantsUpdate]);
 
-  // Pan map on coords change
+  // Handle coordinate changes and marker selection
   useEffect(() => {
     if (!mapRef.current) return;
-    mapRef.current.panTo(currCoords);
-    fetchMarkersDebounced.current?.();
+
+    console.log("=== Coordinate change detected ===");
+    console.log("New coordinates:", currCoords);
+
+    // Pan to new coordinates
+    mapRef.current.panTo({ lat: currCoords.lat, lng: currCoords.lng });
+
+    // If this is a restaurant selection (has place_id), select the specific marker
+    if (currCoords.place_id) {
+      console.log("Looking for marker with place_id:", currCoords.place_id);
+      console.log("Available markers:", Array.from(markersRef.current.keys()));
+      
+      // Try to find the marker data
+      let markerData = markersRef.current.get(currCoords.place_id);
+      
+      if (markerData) {
+        console.log("Found marker by place_id!");
+        showInfoWindow(markerData.marker, markerData.place);
+        mapRef.current.setZoom(17);
+      } else {
+        console.log("Marker not found by place_id, this might be a timing issue");
+        // If we can't find it immediately, try after a short delay
+        setTimeout(() => {
+          const delayedMarkerData = markersRef.current.get(currCoords.place_id!);
+          if (delayedMarkerData) {
+            console.log("Found marker on delayed retry!");
+            showInfoWindow(delayedMarkerData.marker, delayedMarkerData.place);
+            mapRef.current!.setZoom(17);
+          } else {
+            console.log("Still couldn't find marker after delay");
+            console.log("Available keys at retry:", Array.from(markersRef.current.keys()));
+          }
+        }, 500);
+      }
+    } else {
+      // This is a university selection, fetch new restaurants
+      console.log("University selection - fetching new restaurants");
+      fetchMarkersDebounced.current?.();
+    }
   }, [currCoords]);
 
-  // Trigger initial fetch once map is ready
   useEffect(() => {
     if (mapRef.current && fetchMarkersDebounced.current) {
       fetchMarkersDebounced.current();

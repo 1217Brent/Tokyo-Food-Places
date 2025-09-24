@@ -3,17 +3,22 @@
 import { JSX, MouseEventHandler } from "react";
 import FoodPlaceCard from "./FoodPlaceCard";
 
-interface FoodPlaceListProps {
-  foodplaces: google.maps.places.PlaceResult[];
-  handleSelectCoordinates: (coordinates: google.maps.LatLngLiteral) => void;
+interface Coords {
+  lat: number;
+  lng: number;
+  place_id?: string;
 }
 
-function scrollToMap(): MouseEventHandler<HTMLDivElement> | undefined {
+interface FoodPlaceListProps {
+  foodplaces: google.maps.places.PlaceResult[];
+  handleSelectCoordinates: (coordinates: Coords) => void;
+}
+
+function scrollToMap(): void {
   const map = document.getElementById("map-section");
   if (map) {
     map.scrollIntoView({ behavior: "smooth" });
   }
-  return undefined;
 }
 
 function FoodPlaceList({
@@ -25,11 +30,12 @@ function FoodPlaceList({
       <div className="flex flex-nowrap gap-6 min-w-fit">
         {foodplaces?.map((foodplace, idx) => (
           <FoodPlaceCard
-            key={idx}
+            key={foodplace.place_id || idx}
             foodplace={{
               place_id: foodplace.place_id || "",
               name: foodplace.name || "",
-              image: (foodplace.photos && foodplace.photos[0]?.getUrl()) || "",
+              image:
+                (foodplace.photos && foodplace.photos[0]?.getUrl()) || "",
               description: foodplace.vicinity || "",
               rating: foodplace.rating || 0,
               link: foodplace.name
@@ -44,12 +50,12 @@ function FoodPlaceList({
                 handleSelectCoordinates({
                   lat: coords.lat(),
                   lng: coords.lng(),
+                  place_id: foodplace.place_id, 
                 });
                 scrollToMap();
-                console.log("should be scrolled");
-                console.log(scrollToMap);
               }
             }}
+            
           />
         ))}
       </div>
