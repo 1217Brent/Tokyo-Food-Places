@@ -42,7 +42,7 @@ function App(): JSX.Element {
 
   const handleRestaurantsUpdate = useCallback(
     (restaurants: google.maps.places.PlaceResult[]) => {
-      console.log("App: Received restaurant update with", restaurants.length, "restaurants");
+      console.log("App: Received restaurant update with", restaurants.length, "restaurants", mapInstance);
       setFoodLocations(restaurants);
       setFilteredFoodList(restaurants);
     },
