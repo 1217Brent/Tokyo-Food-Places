@@ -1,6 +1,6 @@
 "use client";
 
-import { JSX, MouseEventHandler } from "react";
+import { JSX } from "react";
 import FoodPlaceCard from "./FoodPlaceCard";
 
 interface Coords {

@@ -155,7 +155,7 @@ export default function InitMap({
       console.log("Available markers:", Array.from(markersRef.current.keys()));
       
       // Try to find the marker data
-      let markerData = markersRef.current.get(currCoords.place_id);
+      const markerData = markersRef.current.get(currCoords.place_id);
       
       if (markerData) {
         console.log("Found marker by place_id!");
