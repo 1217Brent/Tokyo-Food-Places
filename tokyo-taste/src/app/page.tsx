@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useCallback, useState, useMemo, JSX } from "react";
+import React, { useCallback, useState, useMemo, JSX } from "react";
 import FoodPlaceList from "./UI/FoodPlaceList";
 import NavBar from "./components/NavBar";
 import Footer from "./components/Footer";
@@ -9,9 +9,7 @@ import InitMap from "./FoodPlaceData/GoogleMapsAPI";
 import currentCoordinates from "./FoodPlaceData/CurrentCoordinates";
 import DropDown from "./components/DropDown";
 import Image from "next/image";
-import fetchNearbyRestaurants from "./hooks/fetchRestaurants";
 
-// Update the Coords interface to include place_id
 interface Coords {
   lat: number;
   lng: number;
@@ -42,21 +40,9 @@ function App(): JSX.Element {
     setMapInstance(map);
   }, []);
 
-  useEffect(() => {
-    if (!mapInstance || !currCoords) return;
-
-    fetchNearbyRestaurants(mapInstance, currCoords)
-      .then((restaurants) => {
-        setFoodLocations(restaurants);
-        setFilteredFoodList(restaurants);
-      })
-      .catch((error) => {
-        console.error("Failed to fetch restaurants:", error);
-      });
-  }, [mapInstance, currCoords]);
-
   const handleRestaurantsUpdate = useCallback(
     (restaurants: google.maps.places.PlaceResult[]) => {
+      console.log("App: Received restaurant update with", restaurants.length, "restaurants");
       setFoodLocations(restaurants);
       setFilteredFoodList(restaurants);
     },
@@ -75,8 +61,9 @@ function App(): JSX.Element {
       const selected = e.target.value;
       const newCoords = universityCoordinates[selected];
       if (newCoords) {
+        console.log("App: University changed to", selected, newCoords);
         setSelectedUniversity(selected);
-        setCurrCoords(newCoords);
+        setCurrCoords(newCoords); // This will trigger restaurant fetch in InitMap
         scrollToMap();
       }
     },
@@ -101,7 +88,7 @@ function App(): JSX.Element {
   );
 
   const handleSelectFoodPlace = useCallback((coords: Coords): void => {
-    console.log("Selected restaurant coords:", coords);
+    console.log("App: Selected restaurant coords:", coords);
     setCurrCoords(coords);
     scrollToMap();
   }, []);
@@ -183,6 +170,9 @@ function App(): JSX.Element {
                 <h3 className="text-2xl font-bold text-cyan-400">
                   Restaurant Collection
                 </h3>
+                <span className="text-slate-400 text-sm">
+                  {filteredFoodList.length} restaurants
+                </span>
               </div>
               {filteredFoodList.length > 0 ? (
                 <FoodPlaceList
